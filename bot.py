@@ -12,11 +12,11 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 load_dotenv('.env')
 
 # Устанавливаем соединение с базой данных PostgreSQL
-db_name = os.getenv("DB_NAME")
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
-db_host = os.getenv("DB_HOST")
-db_port = os.getenv("DB_PORT")
+db_name = os.getenv("POSTGRES_NAME")
+db_user = os.getenv("POSTGRES_USER")
+db_password = os.getenv("POSTGRES_PASSWORD")
+db_host = os.getenv("POSTGRES_HOST")
+db_port = os.getenv("POSTGRES_PORT")
 bot_token = os.getenv("BOT_TOKEN")
 
 conn = psycopg2.connect(database=db_name, user=db_user, password=db_password, host=db_host, port=db_port)
@@ -176,12 +176,19 @@ async def get_location(query: types.CallbackQuery):
     await bot.answer_callback_query(query.id)
     location_text = "📍 Местоположение:\nг. Владивосток, ул. Берёзовая, 20"
     location_url = "https://2gis.ru/vladivostok/directions/points/%7C131.893943%2C43.103735%3B70030076179627104?m=131.909635%2C43.117332%2F14.02"
+    image_filename = "fba0ff26-f775-46de-8fd3-0dd79a954553.jpg"
+    image_path = os.path.join("images", image_filename)
 
     # Создаем инлайн-кнопку с ссылкой "Проложить маршрут"
     markup = types.InlineKeyboardMarkup()
     route_button = types.InlineKeyboardButton(text="Проложить маршрут", url=location_url)
     markup.add(route_button)
 
+    media_group = [
+        types.InputMediaPhoto(media=open(image_path, "rb")),
+    ]
+
+    await bot.send_media_group(query.from_user.id, media=media_group)
     await bot.send_message(query.from_user.id, text=location_text, reply_markup=markup)
 
 
@@ -262,7 +269,7 @@ async def confirm_cancel(query: types.CallbackQuery, state: FSMContext):
 
     # Обновите запись в базе данных, чтобы очистить данные и установить is_available в TRUE
     appointment = appointments[index]
-    cur.execute("UPDATE schedule SET user_name = NULL, user_id = NULL, user_phone = NULL, is_available = TRUE WHERE date = %s AND time = %s", (appointment[0], appointment[1]))
+    cur.execute("UPDATE schedule SET user_name = NULL, user_id = NULL, tg_username = NULL, is_available = TRUE WHERE date = %s AND time = %s", (appointment[0], appointment[1]))
     conn.commit()
 
     # Отправьте сообщение о успешной отмене записи
